@@ -2,6 +2,7 @@
 // Mode Variables
 boolean testing = true;
 
+
 //Temperature Variables
 #define ThermistorNumber 1   //Number of thermistors in the system
 int SeriesResistor = 10000;
@@ -68,7 +69,6 @@ int hallSense(){
 // Function handeling temperature sensor data collection
 void temperature() {
   // Temp Variable
-  float steinhart;
   int sample_count = 0;
   int i;
   
@@ -87,15 +87,6 @@ void temperature() {
     
     //---> This part is broken // Temperature Conversion
     ThermistorResistance[i] = (SeriesResistor)/(1023/ThermistorRaw[i]-1);   //10k / (1023/ADC - 1);   // Resistance
-    
-    //---> This part is broken // Temperature Conversion
-    steinhart = ThermistorResistance[i]/SeriesResistor; // (R/Ro)
-    steinhart = log(steinhart); // ln(R/Ro)
-    steinhart /= BCoEfficient; // 1/B * ln(R/Ro)
-    steinhart += 1.0 / (TempNomial + 273.15); // + (1/To)
-    steinhart = 1.0 / steinhart; // Invert
-    steinhart -= 273.15; // convert to C
-    ThermistorTemp[i] = steinhart;
   }
 }
 
