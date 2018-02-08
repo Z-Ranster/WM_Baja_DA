@@ -7,6 +7,7 @@
 // Mode Variables
 boolean testing = true;  //This gives true=more/false=less data via serial communication (set to false to do live data in Matlab) <-- False is currently broekn
 boolean logging = true;
+boolean wirlessEnables = false;
 
 //Data Logger Shield Variables
 const int chipSelect = 10;  // This is the chip set to use for an Adafriud SD Shield - This is also the digital pin being used
@@ -21,7 +22,9 @@ File myFile;
 int SeriesResistor = 10000;  //Measured in ohms
 float ThermistorRaw[ThermistorNumber];
 double ThermistorResistance[ThermistorNumber];
+double ThermistorTemperature[ThermistorNumber];
 
+/*
 //RPM Variables
 // number of over threshold hall readings
 int readings;
@@ -34,6 +37,8 @@ int NO_FIELD = 505;
 int MAG_THRESH = 10;
 
 //Telemetry Variables
+
+*/
 
 // Multiple Use Variables
 int Num_Samples = 5;  // This value is used for averaging in multiple functions
@@ -88,6 +93,7 @@ void setup() {
 //SD Card Data
 
 /* ---- Additional Functions ---- */
+/*
 // returns 0 for no field, negative for south pole, positive for north pole
 int hallSense(){
   // sensor measurement (add correct input port)
@@ -100,6 +106,61 @@ int hallSense(){
   } else {
     return scaledMeasurement;
   }
+}
+
+*/
+
+//Calculate Temperatures
+//Temperatures measured in Degree of Farenheit
+double calcTemp(double ohms)
+{
+  // Values from: http://www.bapihvac.com/wp-content/uploads/2010/11/Thermistor_100K.pdf
+  /*refOhmTable = [ //R Ohms, T Farenheit
+     8783, 187;
+     11949, 171;
+     14584, 161;
+     17907, 151;
+     22111, 141;
+     27481, 131;
+     34376, 121;
+     43273, 111;
+     54878, 101;
+     70076, 91;
+     90208, 81;
+     117000, 71;
+     153092, 61;
+     201971, 51;
+     269035, 41;
+     361813, 31;
+     491217, 21;
+     674319, 11;
+     935383, 1;
+     1000019, -1;
+  ];*/
+
+  // Variables
+  int len = 20;
+  double refOhmsTable[len] = {8783, 11949, 14584, 17907, 22111, 27481, 34376, 43273, 54878, 70076, 90208, 117000, 153092, 201971, 269035, 361813, 491217, 674319, 935383, 1000019};
+  signed int refTempTable[len] = {187,171,161,151,141,131,121,111,101,91,81,71,61,51,41,31,21,11,1,-1};
+  double b = 0.0; // Temp
+  double m = 0.0; // Temp/Ohms
+  double temp = 0.0;
+  int i = 0;
+  
+  // Calculate Temperatures
+   while(ohms>refOhmsTable[i])
+   {
+     i++;
+   }
+   //P1(rl, th) P2(rh,tl) --> [Ohms, Temp]
+   double point1[] = {refOhmsTable[i],refTempTable[i]};
+   double point2[] = {refOhmsTable[i+1],refTempTable[i+1]};
+   m = (point2[1]-point1[1])/(point2[0]-point1[0]);
+   b = point1[1]-(m*point1[0]);
+   temp = m*ohms+b;
+
+   //Return Data
+   return(temp);
 }
 
 // Function handeling temperature sensor data collection
@@ -126,8 +187,13 @@ void temperature() {
     part1 = (SeriesResistor*ThermistorRaw[i]);
     part2 = (ThermistorRaw[i]-5.13);
     ThermistorResistance[i] = -1*(part1/part2);    //Modified voltage division equation to figure out the resistance of R1
+    //---> Temperature
+    Serial.println("Calculating Temperature");
+    ThermistorTemperature[i] = calcTemp(ThermistorResistance[i]);
   }
 }
+
+/*
 
 // functions for getting rpm from hall sensor
 void logHallSensor(){
@@ -148,6 +214,8 @@ int calculateRPM() {
   double roundsPerSecond = rounds/elapsedTime;
   return (int) roundsPerSecond * 3600;  
 }
+
+*/
 
 // Function handeling serial (USB) communicatoin
 // Message Structure !-Type of Message-Message-!
@@ -175,6 +243,10 @@ void comsTesting() {
     Serial.print(i);
     Serial.print(" Resistance - Ohms: ");
     Serial.println(ThermistorResistance[i]);
+    Serial.print("Thermistor ");
+    Serial.print(i);
+    Serial.print(" Temperature - Farenheit: ");
+    Serial.println(ThermistorTemperature[i]);
   }
 
   //System Status
@@ -202,6 +274,7 @@ void comsTesting() {
   Serial.println("");
 }
 
+/*
 //Serial Coms used for live data
 void comsNonTesting() {
   //Loop Variable
@@ -216,7 +289,7 @@ void comsNonTesting() {
   
   // Temperature Output
   for (i = 0; i < ThermistorNumber; i++) {
-    Serial.print("TID");
+    Serial.print("TID");  //Thermistor Index
     Serial.print(i);
     Serial.print(delimiter);
     Serial.print("V");
@@ -224,6 +297,9 @@ void comsNonTesting() {
     Serial.print(delimiter);
     Serial.print("R");
     Serial.print(ThermistorResistance[i]);
+    Serial.print(delimiter);
+    Serial.print("T");
+    Serial.print(ThermistorTemperature[i]);
     Serial.print(delimiter);
   }
 
@@ -256,6 +332,7 @@ void comsNonTesting() {
   //End of Message Break
   Serial.println("");
 }
+*/
 
 //Save Data
 void saveData(){
@@ -278,6 +355,8 @@ void saveData(){
       myFile.print(ThermistorRaw[i]);
       myFile.print(delimiter);
       myFile.print(ThermistorResistance[i]);
+      myFile.print(delimiter);
+      myFile.print(ThermistorTemperature[i]);
       myFile.print(delimiter);
     }
     
@@ -324,7 +403,9 @@ void loop() {
   }
   else
   {
-    comsNonTesting();
+    /*
+    comsNonTesting(); <-- Finish This
+    */
   }
 
   //Delay and increase loop num
